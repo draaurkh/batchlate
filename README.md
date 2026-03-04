@@ -46,6 +46,12 @@ Then create a JSON file with an empty object for translations (translation.json)
 Run `python batchlate.py source.json template.json translation.json` for basic usage. It will detect any matches and list translations needed. Once translation.json is filled (manually or automatically), run the program again to apply changes.\
 Note: This execution will overwrite source.json. If you don't want that, provide a path with --target option.
 
+# Contributing
+Thank you for your contributions!
+
+Open an issue for requests and bug reports.\
+Create a pull request if you've made changes that will help improve this project such as the entries in [TODO](#todo) section.
+
 # TODO
 - Optimize code
 - Test large data
