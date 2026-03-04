@@ -1,0 +1,64 @@
+Example usage:
+
+    python batchlate.py source template translation                  # read from 'source', find keys to be updated with 'template', translate found keys with 'translation', overwrite 'source'
+    python batchlate.py --target output source template translation  # same as the previous example except it writes to 'output' without changing the source file
+    python batchlate.py --exclude "don't,translate,these,keys" \
+        source template translation                                  # same as the first example but these keys will not be required to translate: don't, translate, these, keys
+    
+TEMPLATE STRUCTURE
+
+A template is a JSON file containing keys with placeholders. Placeholders will act as wildcards that represent the changing parts in repeating patterns. To create a template JSON, one needs to determine these repeating patterns. An example of a basic template JSON {"Type of *": "*"} will represent all of this list of keys [Type of bread, Type of cheese, Type of table, ...] and assign the corresponding values for [bread, cheese, table, ...].
+
+PLACEHOLDERS AND DELIMETERS
+
+Placeholders match the changing parts of similar keys. Default placeholder is "*" character and it will only match a single part. Most commonly you won't need more than the default. But for instance, the list [Two Blue Balls, Three Blue Balls, Three Red Balls, ...] includes infinite different combinations. To represent this list, we could use only one placeholder for either the amount or the color but then we would have to write a template entry for every other changing part. We may easily simplify this list with the following template using two placeholders:
+{"$ * Balls": "There are $ of * colored balls."}
+
+If you run the program with this template, it will fail because it doesn't know which characters to use as placeholders and tries to use the default. Thus, when you use placeholder(s) different than the default, you must specify in the template file. Enter all your placeholder characters (without spaces) with the key "<bt>placeholders</bt>". The program properly executes with the updated template file:
+{
+    "<bt>placeholders</bt>": "*$",
+    "$ * Balls": "There are $ of * colored balls.",
+    "One * Ball": "There is one of * colored balls."  # added for the complete coverage of possible combinations
+}
+
+This template is constructed in a way that it only works for colors and numbers that contain only one word. While "Forty Two Red Balls" won't cause any problems, "Two Light Blue Balls" is gonna produce undesired results. To see why this happens, see Limitations. You can easily avoid most of these by adding delimeters to the template. Since we want to avoid matches with more than one word, a space character would be enough. A space character as a delimeterwill divide the sequence of characters word-by-word. New template JSON:
+{
+    "<bt>placeholders</bt>": "*$",
+    "<bt>delimeters</bt>": " ",                       # added space character as delimeter
+    "$ * Balls": "There are $ of * colored balls.",
+    "One * Ball": "There is one of * colored balls."  # added to completely cover the list
+}
+
+This template will skip "Forty Two Red Balls" or "Two Light Blue Balls". 
+
+HOW TO CREATE TEMPLATE AND TRANSLATION FILES
+
+Let's say the source named "source.json" is like this:
+{"house.red": "Red House", "house.blue": "Blue House", "house.green": "", ..., "ball.red": "Red Ball", "ball.blue": "Blue Ball", "ball.green": "", ...}
+It has many colors of houses and balls. It seems the colors after green isn't filled. The rest could be hand-filled, filled with the help of your editor environment, or filled with %(prog)s.
+
+If this JSON included many more colors of houses and balls, or the existing ones were to be edited, then each of these need to be updated manually and repeatedly. %(prog)s can simplify this task. 
+Create a template JSON named "template.json" with placeholder inserted keys, then translate them:
+{"house.*": "* House", "ball.*": "* Ball"}
+
+The words that will replace the placeholders will need to be translated. Create a file named "translation.json" with an empty JSON object.
+
+Now that all three required files have been created, the program can be executed like this: python batchlate.py -t output.json source.json template.json translation.json
+
+%(prog)s will search all the keys in source.json to match the keys in template.json, then it will look up the translations for the matches in translation.json. If there is no untranslated words, then it will ask to write the result to the target file. In our case, translation.json is empty. %(prog)s will ask to list all the immediate keys (found in the first run) that need to be translated. It will also ask to auto-fill the required keys in translation.json.
+
+You may manually enter all untranslated keys but for this tutorial apply the autofill and then quit. Run again to see if any keys are skipped. If %(prog)s still lists untranslated keys, autofill again. Continue doing this until "untranslated key" warning disappears. Quit the program, view and fill translation.json with translations of each color. Run %(prog)s and write the results. A target.json file containing the output will be created. Try and experiment on this with more colors, or try changing the translation in template (such as: "* Colored House").
+
+Since multiple placeholders are allowed, you may think to create a template like {"#.*": "* #"} to fill both colors and colored objects. Other than being an incomplete template (more on Placeholders and Delimeters), it can be used in this case. But it may match wrong keys in other cases. For instance, it also matches "dog.teeth" which incorrectly fills with "Teeth Dog".
+This is discussed on Limitations in detail.
+
+LIMITATIONS
+            
+The program expects the wildcards to represent only what the constructed regular expression allows. The regex in the case of "$ * Balls" is "^.* .* Balls$", which produces a correct result only if the wildcards represent one word. That's why when the program is executed on "Two Light Blue Balls", it will incorrectly warn you about an untranslated "Two Light" and "Blue" instead of "Two" and "Light Blue". 
+
+Unfortunately, this is how the program constructs the regex automatically. To detect any occurrence of this beforehand, you may analyze your data and look for exceptions. In our case, each key contained words separated from each other by spaces. Since the placeholders in the template are separated by only two spaces, it will separate each key by those two spaces. Naturally, it is expected to fail if there are more than two spaces. After running the program, see the untranslated warning. If you see any matches that doesn't fit the meaning of your placeholders, you have three options.
+    1- Use a delimeter (simple): By using a space character as explained before, items with Light Blue color won't be updated. Either handle them manually after or add another element to templates that handles any "Light" color. 
+    2- Update the keys in source JSON (not that hard but might break your intentional design): Since the problem originates from spaces, make it so that a two word element becomes a one-word like this: Forty-Two Light-Blue Balls
+    3- Use --exclude option (needs manual exclusion): Add false positives like "Two Light". Usefulness depends on the number of items that will be manually excluded.
+    
+Using ambiguous templates like {"#.*": "* #"} will eventually cause problems if you don't know what you are doing. Since most of these "translations" will depend on the grammar, there might be multiple meanings that could be interpreted. Both "house.red" and "dog.teeth" will match this template but their meanings are interpreted differently as mentioned before. It should be preferable to use only one changing part of these as placeholder to avoid misinterpretations.
