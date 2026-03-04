@@ -20,20 +20,20 @@ We will need 3 files:
 The original JSON file (source.json):
 ```JSON
 {
-  "One Pen": "There is one pen.",
-  "Two Pens": "There are two pens.",
-  "Three Pens": "There are three pens.",
-  "Four Pens": "There are four pens.",
-  "Five Pens": "There are five pens.",
-  "Six Pens": "There are six pens.",
-  "Seven Pens": "There are seven pens.",
-  "Eight Pens": "There are eight pens.",
-  "Nine Pens": "There are nine pens.",
-  "Ten Pens": "There are ten pens."
+  "One Pen": "",
+  "Two Pens": "",
+  "Three Pens": "",
+  "Four Pens": "",
+  "Five Pens": "",
+  "Six Pens": "",
+  "Seven Pens": "",
+  "Eight Pens": "",
+  "Nine Pens": "",
+  "Ten Pens": ""
 }
 ```
 
-If there is a pattern, this JSON can be simplified with placeholder characters (default: *) to create a template file (template.json):
+If there is a pattern, this JSON can be simplified using placeholder characters (default: *) to create a template file (template.json). Values defined in this file will be correctly assigned to elements matching specified keys:
 ```JSON
 {
   "One Pen": "There is one pen.",
