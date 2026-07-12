@@ -58,8 +58,7 @@ Apply these steps to get started:
 2. Delete the ellipses in _source.json_ and add as many keys as you want (keep it simple for now) with the same arrangement for objects and colors.
 3. Create a JSON file named _template.json_ and copy-paste this JSON: `{"house.*": "* House", "ball.*": "* Ball"}` template will match the color parts of each entry, which are common in all keys.
 4. Run `python batchlate.py -o path/to/output.json path/to/source.json path/to/template.json path/to/translation.json` with the paths to your files. You don't need to create _output.json_ and _translation.json_ as they will be automatically created if needed.
-    > [!NOTE]
-    > `-o` option writes the results to a separate file and doesn't alter _source.json_. If you don't mind overwriting your original file, you can omit it. 
+    > _Note:_ `-o` option writes the results to a separate file and doesn't alter _source.json_. If you don't mind overwriting your original file, you can omit `-o` option. 
 5. The program will then ask to list the untranslated keys or auto-fill translation.json with them. Select auto-filling. Check _translation.json_ and confirm that it's created with lowercase colors inserted as keys.
 6. Update the values in translation.json with the capitalized version of their keys.
 7. Run the command in step 4 again. It shouldn't warn you about untranslated elements but if it does, repeat the steps 4-7. If no translation is needed, it will ask "\<n\> key(s) will be updated. Do you want to proceed?" to write the results. Answer "yes" and confirm the "Done." message.
@@ -82,7 +81,7 @@ _Note: Both the file and JSON entries of that file may be called as __template__
 
 ### Placeholders And Delimeters
 
-Placeholders match with the changing parts of similar keys. The default placeholder is __\*__ (asterisk) character. __A single placeholder will match only one part of a string__ and it would suffice for most use cases. But for instance, the list of keys `[Two Blue Balls, Three Blue Balls, Three Red Balls, ...]` includes infinite number of combinations. In this case, one placeholder wouldn't be enough because there are two different changing parts: The amount and the color. This list may easily be simplified by using two placeholders with the following template:
+Placeholders match with the changing parts of similar keys. The default placeholder is `*` (asterisk) character. __A single placeholder will match only one part of a string__ and it would suffice for most use cases. But for instance, the list of keys `[Two Blue Balls, Three Blue Balls, Three Red Balls, ...]` includes infinite number of combinations. In this case, one placeholder wouldn't be enough because there are two different changing parts: The amount and the color. This list may easily be simplified by using two placeholders with the following template:
 ```json
 {"$ * Balls": "There are $ of * colored balls."}
 ```
@@ -134,7 +133,7 @@ Let's start with the first problem. If you look at the values of keys with `stai
     "object.*.#_windows": "Windows of * #"
 }
 ```
-If we run the program with this template (after declaring used placeholders) it will want you to translate `[wooden, house, house_stairs, house_windows]` instead of `[wooden, house]`. It means that the program won't even consider the second and the third templates and matches all the keys with only the first template. This is because __\#__ placeholder in the first template will match anything until the end of string, including the keys that would also be matched by the other templates. If it's unclear, think of the first template as a more generalized version of the other templates.
+If we run the program with this template (after declaring used placeholders) it will want you to translate `[wooden, house, house_stairs, house_windows]` instead of `[wooden, house]`. It means that the program won't even consider the second and the third templates and matches all the keys with only the first template. This is because `#` placeholder in the first template will match anything until the end of string, including the keys that would also be matched by the other templates. If it's unclear, think of the first template as a more generalized version of the other templates.
 
 <a name="precedence-rule"></a>
 __Prior templates take precedence over subsequent ones__. Then we can fix the second problem by inserting the more generalized templates __after__ the ones that would otherwise be contained by it. Rearranging our template JSON like this would fix all the problems mentioned:
@@ -154,13 +153,13 @@ Placeholder placement is pretty flexible if [grammar and precedence](#grammar-di
 <a name="duplicate-removal-workaround"></a>
 If your goal is to delete duplicate entries, there is a workaround. Copy one of the source JSON entries with no duplicates and paste it to the template JSON. After running the program, all duplicates saving the last one of each will be removed.
 
-- ___Unmatching placeholders in keys:___ `{"* is used while # is not": "Using *"}` template captures two different phrases but only updates the value with the phrase captured by **\***  placeholder. This may be used when you don't want to translate a captured phrase but to only match it. The same logic applies to this template: `{"*": ""}` will match all the keys in the source and fill the values with empty strings.
+- ___Unmatching placeholders in keys:___ `{"* is used while # is not": "Using *"}` template captures two different phrases but only updates the value with the phrase captured by `*`  placeholder. This may be used when you don't want to translate a captured phrase but to only match it. The same logic applies to this template: `{"*": ""}` will match all the keys in the source and fill the values with empty strings.
 
-- ___Unmatching placeholders in values:___ In the template `{"only * will be captured": "* is captured while # won't"}`, **\*** will require translations while **\#** will be used as is even though it is defined as a placeholder.
+- ___Unmatching placeholders in values:___ In the template `{"only * will be captured": "* is captured while # won't"}`, `*` will require translations while `#` will be used as is even though it is defined as a placeholder.
 
-- ___Reusing placeholders in keys:___ In the template `{"* will be captured while * won't": "first * is used"}`, the phrase captured by the first **\*** will be used in the value, no matter how many of the same placeholders exist in the key. If you want only to match a phrase, you can use this method instead of using another placeholder.
+- ___Reusing placeholders in keys:___ In the template `{"* will be captured while * won't": "first * is used"}`, the phrase captured by the first `*` will be used in the value, no matter how many of the same placeholders exist in the key. If you want only to match a phrase, you can use this method instead of using another placeholder.
 
-- ___Reusing placeholders in values:___ `{"three * in a row": "* * *"}` template will capture the phrase with **\*** placeholder and place its translated value three times with a space between them.
+- ___Reusing placeholders in values:___ `{"three * in a row": "* * *"}` template will capture the phrase with `*` placeholder and place its translated value three times with a space between them.
 
 # Limitations
 
