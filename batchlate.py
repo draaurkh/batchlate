@@ -19,73 +19,113 @@
 import utils
 
 if __name__ == "__main__":
-    # get file paths from arguments
     args = utils.parse_arguments()
     
-    if (not isinstance(args.output_indent, str)
-            and not isinstance(args.output_indent, int)
-            and args.output_indent is not None):
-        exit('Invalid argument. Please provide a string or an integer value that can specify the indentation level with --output-indent option.')
-
-    # create dictionaries from json objects
-    source = utils.read_json(args.source)
-    template = utils.read_json(args.template)
-    translations = utils.read_json(args.translations)
+    # also updates non-string values with produced string results
+    overwrite_nonstrings = args.allow_nonstring_overwrite
     
-    # read exclusions
-    excluded = None
-    if args.exclude is not None:
-        excluded = set(item.strip() for item in args.exclude.split(','))
+    # read output indentation
+    try:
+        output_indent = int(args.output_indent)
+    except ValueError:
+        output_indent = args.output_indent
+        if output_indent == 'compact':
+            output_indent = None
+        elif output_indent != '' and not output_indent.isspace():
+            exit('Invalid --output-indent argument. Please provide a string or an integer value that can specify an indentation level for output.')
+     
+    # read required JSON files
+    try:
+        source = utils.read_json(args.source)
+        template = utils.read_json(args.template)
+    except Exception as e:
+        print(e)
+        exit()
+    
+    translation_path = args.translation
+    if translation_path is None:
+        print('No translation file provided.')
+        print('Enter a path to a translation file. It will be created if it\'s not found.') 
+        translation_path = input('> ')
+    
+    # read translation path
+    try:
+        translation = utils.read_json(translation_path)
+    except FileNotFoundError:
+        translation = None
+    except Exception as e:
+        print(f'"{translation_path}" could not be opened.\n{e}')
+        exit()
 
-    # check if created dictionaries are valid
+    # accept only OBJECT type JSONs
     if not isinstance(source, dict):
-        exit('Source JSON must have an Object at the top-level.')
+        exit('Source JSON must have a top-level Object.')
     if not isinstance(template, dict):
-        exit('Template JSON must have an Object at the top-level.')
-    if not isinstance(translations, dict):
-        exit('Translations JSON must have an Object at the top-level.')
+        exit('Template JSON must have a top-level Object.')
+    if translation is not None and not isinstance(translation, dict):
+        exit('Translation JSON must have a top-level Object.')
         
+    # create translation configuration
+    config = utils.TConfig(template)
+    config.set_translation(translation)
+    config.verbose_level = args.verbose
+    config.overwrite_nonstrings = overwrite_nonstrings
+    batchlate = utils.Batchlate(source, config)
+
     # start translation of source
-    result, translation_needed, updated_counter = utils.translate(source, template, translations, excluded, args.verbose)     
+    result = batchlate.translate()
+    non_translated_keys = result.non_translated_keys()
     
-    if len(translation_needed) > 0:
+    if len(non_translated_keys) > 0:
         # there is at least one untranslated element
         print('Untranslated elements found.')
         pressed_key = ''
         while pressed_key not in set('aq23'):
             print('\nPlease provide an acceptable action.')
             print('1. (l)ist keys')
-            print(f'2. (a)uto-fill Translations JSON: {args.translations}')
+            print(f'2. (a)uto-fill untranslated keys in "{translation_path}"')
             print('3. (q)uit')
             pressed_key = input('> ').lower()
             match pressed_key:
                 case '1' | 'l':
                     print('You can do either of these to resolve missing translations:')
-                    print(f' - provide translations for all of them in Translations JSON ({args.translations})')
-                    print(f' - add delimeters in Template JSON ({args.template})')
-                    print(" - add exclusions with '--exclude' option\n")
+                    print(f' - provide translations for all of them in Translation JSON ({args.translation})')
+                    print(f' - add delimeters in Template JSON ({args.template}) to eliminate faulty matches')
+                    print(f' - add exclusions in Template JSON ({args.template})\n')
                     
                     print('Please examine the following keys:')
-                    for item in sorted(translation_needed):
-                        print(f'  - {item}')
+                    for value, placeholder_type in result.sorted_non_translated_keys().items():
+                        print(f'  - {value} ({placeholder_type})')
+                        
+                        
                 case '2' | 'a':
-                    dictionary = utils.read_json(args.translations)
-                    for translation_key in translation_needed:
-                        dictionary[translation_key] = ''
-                    utils.write_json(args.translations, dictionary, indent=args.output_indent)
-                    print(f'Translations JSON "{args.translations}" is filled with all the required keys. Fill in the translations and run the program again.')
+                    updated_translation = dict.fromkeys(result.sorted_non_translated_keys(), '')
+                    if translation is not None:
+                        # new elements are added to beginning
+                        updated_translation.update(translation)
+
+                    try:
+                        utils.write_json(translation_path, updated_translation, indent=2)
+                    except Exception as e:
+                        print(e)
+                        exit()
+                        
+                    print(f'Translation JSON "{translation_path}" is filled with all the required keys. Fill in the translations and run the program again.')
                  
+                
         print('Finishing...')
         
-    elif updated_counter > 0:
-        message = f'{updated_counter} key(s) will be updated.'
-        if args.target is None:
+    elif result.updated_counter > 0:
+        message = f'{result.updated_counter} key(s) will be updated.'
+        if args.output is None:
+            target_file = args.source
             message += f' WARNING! Source file ({args.source}) will be overwritten because a target file is not provided.'
         else: 
-            message += f' Updated strings will be written to target file ({args.target})'
+            target_file = args.output
+            message += f' Updated entries will be written to target file ({args.output})'
         
         print(message)
-        print('Do you want to continue?')
+        print('Do you want to proceed?')
         
         pressed_key = ''
         while pressed_key not in set('yq12'):
@@ -95,11 +135,14 @@ if __name__ == "__main__":
             
         match pressed_key:
             case 'y' | '1':
-                target_file = args.target if args.target is not None else args.source
-                utils.write_output(target_file, result, indent=args.output_indent)
+                try:
+                    utils.write_json(target_file, result.result, indent=output_indent)
+                except Exception as e:
+                    print(e)
+                    exit()
                 print('\nDone.')
             
     else:
-        print('Template(s) could not match anything. Finishing...')
+        print('Nothing to do. Finishing...')
         
     utils.cleanup()
