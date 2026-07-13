@@ -6,7 +6,7 @@ Download the latest release or clone this repository.
 
 ### Requirements:
 
-- Python 3.5 or newer
+- Python 3.10 or newer
 
 # Usage
 
@@ -177,7 +177,7 @@ You have a couple of options to solve these kind of issues. Firstly, run the pro
 1. ___Add entries to templates that covers all required colors___. If you respect the [precedence rule](#precedence-rule), you can add many entries that work with each other. This may solve the current problem or make it a bigger problem depending on how many colors there are. In our case, only the multi-word colors produce errors. If _Light_ colors are the only problem, this method can easily handle it.
 2. ___Use a delimeter___ (simple). By setting the space character as a delimeter [as explained here](#placeholders-and-delimeters), entries with amount and colors that contain multiple words such as _Light_ colors won't be detected. Either handle them manually or add another element to templates that handles any _Light_ color.  
 3. ___Update your source file___ (might break your intentional design). Since this problem originates from spaces, make it so that a multi-word element becomes a single-word like this: Forty-Two Light-Blue Balls
-4. ___Use exclusions___. Exclude false positives like "Two Light" with "`<bt>excluded</bt>`" key in the template. Usefulness depends on the number of items that will be manually excluded. In this case detected false positives are too many to even consider this option. 
+4. ___Use exclusions___. Exclude false positives like "Two Light" with "`<bt>excluded</bt>`" key in the template as a comma-separated list. Usefulness depends on the number of items that will be manually excluded. In this case detected false positives are too many to even consider this option. 
     
 ## Ambiguous Templates
 
@@ -200,3 +200,5 @@ Create a pull request if you've made changes that will help improve this project
 - Migrate execution to shell commands
 - Support more file types
 - Enable entering regex directly as a key in templates
+- Colored print messages
+- Interactive usage

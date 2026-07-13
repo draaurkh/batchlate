@@ -23,6 +23,7 @@ from pathlib import Path
 
 import settings
 
+
 def parse_arguments() -> argparse.Namespace:
     '''Parses command line arguments for batchlate
 
@@ -39,8 +40,8 @@ def parse_arguments() -> argparse.Namespace:
             formatter_class=argparse.RawDescriptionHelpFormatter,
             allow_abbrev=False
             )
-    
-    version_info=f'''
+
+    version_info = f'''
 %(prog)s {settings.PROGRAM_VERSION}
 
 Free and open source under GNU GPLv3 license
@@ -53,11 +54,12 @@ Created and released by draaurkh <https://github.com/draaurkh/batchlate>
     arg_parser.add_argument('-o', '--output', metavar='OUTPUT-PATH', type=str, help='Optional path to a JSON file that will contain the output. The file will be created automatically. Without this option, \'source\' JSON file will be overwritten instead.')
     arg_parser.add_argument('--output-indent', metavar='<space-indicator or "compact">', default=settings.DEFAULT_OUTPUT_INDENT, help='Indented space of the output JSON. Can be an integer, a string indicating a space such as "\\t", or "compact"')
     arg_parser.add_argument('--allow-nonstring-overwrite', action='store_true', help='Whether or not to update non-string valued entries with the produced string values')
-    arg_parser.add_argument('-f','--force', action='store_true', help='Forces to continue translation even though there are missing translations. Currently non-operational.')
-    arg_parser.add_argument('-v','--verbose', action='count', default=0)
+    arg_parser.add_argument('-f', '--force', action='store_true', help='Forces to continue translation even though there are missing translations. Currently non-operational.')
+    arg_parser.add_argument('-v', '--verbose', action='count', default=0)
     arg_parser.add_argument('--version', action='version', version=version_info.strip())
 
     return arg_parser.parse_args()
+
 
 def read_json(file_path: str):
     """Extracts JSON from the provided path
@@ -81,7 +83,7 @@ def read_json(file_path: str):
     """
 
     p = Path(file_path)
-    
+
     if not p.exists():
         raise FileNotFoundError(f'No such file: "{p}"')
     elif p.is_dir():
@@ -92,6 +94,7 @@ def read_json(file_path: str):
             return json.load(f)
         except json.JSONDecodeError as je:
             raise Exception(f'"{p}" is not a properly formatted JSON file.\n{je.args[0]}')
+
 
 def write_json(file_path: str, input_dict: dict[str, str], indent: int | str | None):
     """Writes a Python dictionary to a JSON file
@@ -104,24 +107,25 @@ def write_json(file_path: str, input_dict: dict[str, str], indent: int | str | N
     Raises:
         FileExistsError: If the path isn't valid
         Exception: On any read errors
-    """    
-    
+    """
+
     p = Path(file_path)
-    
+
     try:
         if not p.exists():
             p.parent.mkdir(parents=True, exist_ok=True)
 
         with p.open('w+') as f:
             json.dump(input_dict, f, indent=indent, ensure_ascii=False)
-    except FileExistsError, NotADirectoryError:
+    except (FileExistsError, NotADirectoryError):
         raise FileExistsError(f'"{p}" could not be created. One of its parents is not a directory.')
     except Exception as e:
         raise e
 
+
 class TConfig:
-    """Translation configuration"""    
-    
+    """Translation configuration"""
+
     def __init__(self, template: dict[str, str]):
         self.template: dict[str, str] = template.copy()
         self.translation: dict[str, str] | None = None
@@ -131,9 +135,10 @@ class TConfig:
     def set_translation(self, translation: dict[str, str] | None):
         self.translation = None if translation is None else translation
 
+
 class Batchlate:
-    """Translator"""    
-    
+    """Translator"""
+
     def __init__(self, source: dict[str, str], config: TConfig):
         self.__source: dict[str, str] = source
         self.__config: TConfig = config
@@ -144,21 +149,21 @@ class Batchlate:
             self.processed_keys: set[str] = set()    # a set of keys that are already processed
             self.updated_counter: int = 0    # counts how many elements of the source file will be updated
             self.__non_translated_keys: dict[str, str] = {}    # a set of detected keys that need to be translated in translations JSON
-            
+
             self.__sorted_non_translated_keys: dict[str, str] | None = None
-            
+
         def non_translated_keys(self):
             return self.__non_translated_keys.copy()
-            
+
         def add_new_non_translated_key_or_not(self, key: str, value: str):
             if key not in self.__non_translated_keys:
                 self.__non_translated_keys[key] = value
                 self.__sorted_non_translated_keys = None
-            
+
         def sorted_non_translated_keys(self, ):
             if self.__sorted_non_translated_keys is None:
                 self.__sorted_non_translated_keys = dict(sorted(self.__non_translated_keys.items(), key=lambda item: item[1]))
-                
+
             return self.__sorted_non_translated_keys.copy()
 
     def get_template_wildcard_property(self, key: str, default: str | None = None) -> str | None:
@@ -166,7 +171,7 @@ class Batchlate:
         if value is None or len(value) == 0:
             return default
 
-        return ''.join(set(value)) # extract unique letters 
+        return ''.join(set(value))  # extract unique letters
 
     def get_translation_value(self, key: str) -> str | None:
         if self.__config.translation is not None:
@@ -182,8 +187,8 @@ class Batchlate:
 
         Returns:
             TResult: The translation result that will either be complete or incomplete translation
-        """        
-        
+        """
+
         # initialize output
         result = self.TResult(self.__source)
 
@@ -191,7 +196,7 @@ class Batchlate:
 
         # read and assign variables
         placeholder_types = self.get_template_wildcard_property(settings.PLACEHOLDERS_KEY, default=settings.DEFAULT_PLACEHOLDER)
-        if placeholder_types is None: 
+        if placeholder_types is None:
             raise Exception('settings.py must provide an character value for DEFAULT_PLACEHOLDER')
         esc_placeholder_types = re.escape(placeholder_types)
 
@@ -200,7 +205,7 @@ class Batchlate:
 
         excluded = template.get(settings.EXCLUDED_KEY)
         if excluded is not None:
-            excluded = set(item.strip() for item in excluded.split(','))
+            excluded = set(excluded.split(','))
 
         print(f'Selected placeholder(s): {placeholder_types}')
         print(f'Using delimeter(s): {delimeters}')
@@ -213,6 +218,8 @@ class Batchlate:
             # get template translation value
             template_value = template.get(template_key)
             if template_value is None or not isinstance(template_value, str):
+                if self.__config.verbose_level > 1:
+                    print(f'Skipping the template key "{template_key}": value is non-string\n')
                 continue
 
             # disect the key with placeholder characters
@@ -234,7 +241,7 @@ class Batchlate:
                 placeholders.append(part[1])
                 if esc_delimeters is None:
                     pattern += r'(.+)'
-                else: 
+                else:
                     pattern += rf'([^{esc_delimeters}]+)'
 
             pattern += r'$'
@@ -249,10 +256,14 @@ class Batchlate:
                     break
 
             for source_key, source_value in self.__source.items():
-                if (source_key in result.processed_keys
-                    or not self.__config.overwrite_nonstrings and not isinstance(source_value, str)):
+                if source_key in result.processed_keys:
                     # skip already processed items
+                    continue
+
+                if not self.__config.overwrite_nonstrings and not isinstance(source_value, str):
                     # skip items with non-string values if --allow-nonstring-overwrite flag isn't provided
+                    if self.__config.verbose_level > 1:
+                        print(f'Skipping the key "{source_key}": value is non-string\n')
                     continue
 
                 translation_key = regex.match(source_key)
@@ -262,10 +273,11 @@ class Batchlate:
                     continue
 
                 if (self.__config.verbose_level > 1):
-                    print(f'Parameterized string(s) for key "{source_key}": ', translation_key.groups())
+                    print(f'Parameterized string(s) for the key "{source_key}": ', translation_key.groups())
 
                 if len(placeholders) < 1 or not is_value_parameterized:
-                    # directly assign the value if it does not need replacements or the template key does not have placeholders
+                    # directly assign the value if it does not need replacements
+                    # or the template key does not have placeholders
                     result.result[source_key] = template_value
                     result.processed_keys.add(source_key)
                     result.updated_counter += 1
@@ -303,9 +315,11 @@ class Batchlate:
                     result.processed_keys.add(source_key)
                     result.updated_counter += 1
                     if (self.__config.verbose_level > 1):
-                        print(f'Will translate to: {result_value}\n')
+                        print(f'Will translate to: "{result_value}"\n')
 
         return result
 
+
 def cleanup():
     re.purge()
+

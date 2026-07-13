@@ -20,10 +20,10 @@ import utils
 
 if __name__ == "__main__":
     args = utils.parse_arguments()
-    
+
     # also updates non-string values with produced string results
     overwrite_nonstrings = args.allow_nonstring_overwrite
-    
+
     # read output indentation
     try:
         output_indent = int(args.output_indent)
@@ -33,7 +33,7 @@ if __name__ == "__main__":
             output_indent = None
         elif output_indent != '' and not output_indent.isspace():
             exit('Invalid --output-indent argument. Please provide a string or an integer value that can specify an indentation level for output.')
-     
+
     # read required JSON files
     try:
         source = utils.read_json(args.source)
@@ -41,13 +41,13 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         exit()
-    
+
     translation_path = args.translation
     if translation_path is None:
         print('No translation file provided.')
-        print('Enter a path to a translation file. It will be created if it\'s not found.') 
+        print('Enter a path to a translation file. It will be created if it\'s not found.')
         translation_path = input('> ')
-    
+
     # read translation path
     try:
         translation = utils.read_json(translation_path)
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         exit('Template JSON must have a top-level Object.')
     if translation is not None and not isinstance(translation, dict):
         exit('Translation JSON must have a top-level Object.')
-        
+
     # create translation configuration
     config = utils.TConfig(template)
     config.set_translation(translation)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     # start translation of source
     result = batchlate.translate()
     non_translated_keys = result.non_translated_keys()
-    
+
     if len(non_translated_keys) > 0:
         # there is at least one untranslated element
         print('Untranslated elements found.')
@@ -92,12 +92,11 @@ if __name__ == "__main__":
                     print(f' - provide translations for all of them in Translation JSON ({args.translation})')
                     print(f' - add delimeters in Template JSON ({args.template}) to eliminate faulty matches')
                     print(f' - add exclusions in Template JSON ({args.template})\n')
-                    
+
                     print('Please examine the following keys:')
                     for value, placeholder_type in result.sorted_non_translated_keys().items():
                         print(f'  - {value} ({placeholder_type})')
-                        
-                        
+
                 case '2' | 'a':
                     updated_translation = dict.fromkeys(result.sorted_non_translated_keys(), '')
                     if translation is not None:
@@ -109,30 +108,29 @@ if __name__ == "__main__":
                     except Exception as e:
                         print(e)
                         exit()
-                        
+
                     print(f'Translation JSON "{translation_path}" is filled with all the required keys. Fill in the translations and run the program again.')
-                 
-                
+
         print('Finishing...')
-        
+
     elif result.updated_counter > 0:
         message = f'{result.updated_counter} key(s) will be updated.'
-        if args.output is None:
+        if args.output is None or args.output == args.source:
             target_file = args.source
-            message += f' WARNING! Source file ({args.source}) will be overwritten because a target file is not provided.'
-        else: 
+            message += f' WARNING! Source file ({args.source}) will be overwritten. If you don\'t want that, provide another path with --output option.'
+        else:
             target_file = args.output
             message += f' Updated entries will be written to target file ({args.output})'
-        
+
         print(message)
         print('Do you want to proceed?')
-        
+
         pressed_key = ''
         while pressed_key not in set('yq12'):
             print('1. (y)es')
             print('2. (q)uit')
             pressed_key = input('Please provide an acceptable action: ').lower()
-            
+
         match pressed_key:
             case 'y' | '1':
                 try:
@@ -141,8 +139,8 @@ if __name__ == "__main__":
                     print(e)
                     exit()
                 print('\nDone.')
-            
+
     else:
         print('Nothing to do. Finishing...')
-        
+
     utils.cleanup()
